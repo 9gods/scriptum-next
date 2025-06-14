@@ -46,7 +46,7 @@ bun run dev                # http://localhost:3000
 
 * Giovane Comelli / 9gods
 * Rafael Gonçalves
-* Eduarda Kacprzak / [dudaclw (https://github.com/dudaclw?tab=repositories)]
+* Eduarda Kacprzak / [dudaclw](https://github.com/dudaclw?tab=repositories)
 * Giullia Villanova
 * Maria Eduarda Kolitski
 
