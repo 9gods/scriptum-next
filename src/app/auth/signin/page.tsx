@@ -1,4 +1,5 @@
 import { FlickeringParticles } from "@/components/animations/flickering-particles";
+import { SigninForm } from "@/components/auth/signin-form";
 import { ModeToggle } from "@/components/mode-toggle";
 import {
   Card,
@@ -14,10 +15,10 @@ export default function Page() {
         <CardHeader>
           <CardTitle>Entrar no Scriptum</CardTitle>
           <CardDescription>
-            Insira seu email e senha para acessar sua conta.
+            Insira seu email e senha, ou acesse sua conta Google.
           </CardDescription>
         </CardHeader>
-        a
+         <SigninForm />
       </Card>
       <ModeToggle className="absolute top-4 right-4" />
       <FlickeringParticles className="absolute inset-0 invert dark:invert-0 dark:opacity-10 opacity-20" />

@@ -6,4 +6,8 @@ export type User = {
   avatarUrl?: string;
   createdAt: Date;
   updatedAt: Date;
+  newUser: boolean;
 };
+export type UserCard = {
+
+}

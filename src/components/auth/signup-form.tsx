@@ -19,6 +19,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
 import { useState } from "react";
 import { CardContent, CardFooter } from "../ui/card";
+import Link from "next/link";
 
 export const SignupForm = () => {
   const form = useForm<UserFormValuesWithPassword>({
@@ -115,6 +116,17 @@ export const SignupForm = () => {
               </FormItem>
             )}
           />
+
+          <div className="flex justify-center">
+            <div className="mt-4 flex items-center gap-0 text-sm">
+              Já possui conta?
+              <Link href={"/auth/signin"}>
+                <Button type="button" variant={"link"} className="pl-1">Faça Login</Button>
+              </Link>
+            </div>
+          </div>
+
+
         </CardContent>
         <CardFooter className="justify-end">
           <Button type="submit" disabled={form.formState.isSubmitting}>
