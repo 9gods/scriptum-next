@@ -1,10 +1,9 @@
 import type { Note } from "@/domain/entities/note";
 
 /**
- * remove a formatacao Markdown de um texto e limita o resultado a 200 caracteres.
- *
- * @param text - texto original com possiveis simbolos Markdown
- * @returns texto limpo
+ * Remove formatação Markdown do texto
+ * @param text - Texto com formatação Markdown
+ * @returns Texto limpo sem formatação Markdown
  */
 export const cleanMarkdownText = (text: string): string => {
 	const markdownSymbols = /[#*`_\[\]!]/g;
@@ -36,9 +35,9 @@ export function formatBrazilianDate(input: Date | number | string): string {
 }
 
 /**
- * ordena notas por fixadas e depois por data
- * @param notes - array de notas
- * @returns array de notas ordenadas
+ * Ordena notas por fixadas e depois por data (mais recente primeiro)
+ * @param notes - Array de notas a serem ordenadas
+ * @returns Array de notas ordenadas
  */
 export const sortNotes = (notes: Array<Note>): Array<Note> =>
 	notes
