@@ -34,12 +34,6 @@ export const SigninForm = () => {
   });
 
   async function onSubmit(values: UserFormValuesWithPassword) {
-    // const submissionPayload = await signupService(values);
-    // if (!submissionPayload.success) {
-    //   toast.error("Opa! Algo deu errado...", {
-    //     description: "Por favor, verifique os campos.",
-    //   });
-    // }
     toast.success("Conta criada com sucesso!");
     form.reset();
   }
@@ -96,7 +90,7 @@ export const SigninForm = () => {
                 <FormLabel className="flex justify-center"></FormLabel>
                 <FormControl>
                   <div className="space-y-4">
-                    
+
                     <div className="w-full border-t border-white"></div>
 
                     <Button
@@ -117,10 +111,11 @@ export const SigninForm = () => {
           <div className="flex justify-center">
             <div className="mt-4 flex items-center gap-0 text-sm">
               Novo por aqui?
-              <Link href={"/auth/signup"}>
+              <Link href={"/auth/mainpage"}>
                 <Button type="button" variant={"link"} className="pl-1">Registre-se</Button>
               </Link>
             </div>
+  
           </div>
         </CardContent>
         <CardFooter className="justify-end">

@@ -8,6 +8,7 @@ export type User = {
   updatedAt: Date;
   newUser: boolean;
 };
+
 export type UserCard = {
 
 }
