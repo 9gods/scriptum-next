@@ -1,10 +1,10 @@
 import { NoteCardProps } from "@/domain/types/types";
 
 /**
-
- * @param text - formatação Markdown
-  @returns 
-
+ * Remove formatação Markdown do texto
+ * @param text - Texto com formatação Markdown
+ * @returns Texto limpo sem formatação Markdown
+ */
 export const cleanMarkdownText = (text: string): string => {
   const markdownSymbols = /[#*`_\[\]!]/g;
   const listItems = /^\- /gm;
@@ -16,9 +16,9 @@ export const cleanMarkdownText = (text: string): string => {
 };
 
 /**
- * formata data para o padrão brasileiro
- * @param dateString - data em formato string
- * @returns data formatada 
+ * Formata data para o padrão brasileiro
+ * @param dateString - Data em formato string
+ * @returns Data formatada no padrão brasileiro
  */
 export const formatBrazilianDate = (dateString: string): string => {
   const dateOptions: Intl.DateTimeFormatOptions = {
@@ -31,9 +31,9 @@ export const formatBrazilianDate = (dateString: string): string => {
 };
 
 /**
- * ordena notas por fixadas e depois por data
- * @param notes - array de notas
- * @returns array de notas ordenadas
+ * Ordena notas por fixadas e depois por data (mais recente primeiro)
+ * @param notes - Array de notas a serem ordenadas
+ * @returns Array de notas ordenadas
  */
 export const sortNotes = (notes: NoteCardProps['note'][]) => {
   return [...notes].sort((a, b) => {

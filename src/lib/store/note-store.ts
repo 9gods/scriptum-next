@@ -1,4 +1,3 @@
-// lib/store/note-store.ts
 import { create } from 'zustand';
 import { Note } from '@/domain/types/types';
 import { persist } from 'zustand/middleware';
