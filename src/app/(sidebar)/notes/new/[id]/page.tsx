@@ -1,15 +1,15 @@
 // app/notes/[id]/page.tsx
-import { NoteForm } from '@/components/auth/note-form';
+import { NoteForm } from "@/components/notes/note-form";
 
 export default function EditNotePage({
-  params: { id },
+	params: { id },
 }: {
-  params: { id: string };
+	params: { id: string };
 }) {
-  return (
-    <div className="max-w-3xl mx-auto p-6">
-      <h1 className="text-2xl font-bold mb-6">Editar Nota</h1>
-      <NoteForm noteId={id} />
-    </div>
-  );
+	return (
+		<div className="max-w-3xl mx-auto p-6">
+			<h1 className="text-2xl font-bold mb-6">Editar Nota</h1>
+			<NoteForm noteId={id} />
+		</div>
+	);
 }
