@@ -2,8 +2,7 @@ import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { ClipboardList, FilePlus2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import {EmptyStateProps } from '@/domain/types/types'
-
+import { EmptyStateProps } from '@/domain/types/types';
 
 const icons = {
   note: ClipboardList,

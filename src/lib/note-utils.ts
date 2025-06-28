@@ -2,8 +2,8 @@ import type { Note } from "@/domain/entities/note";
 
 /**
  * Remove formatação Markdown do texto
- * @param text - Texto com formatação Markdown
- * @returns Texto limpo sem formatação Markdown
+ * @param text - formatação Markdown
+ * @returns texto limpo sem formatação Markdown
  */
 export const cleanMarkdownText = (text: string): string => {
 	const markdownSymbols = /[#*`_\[\]!]/g;

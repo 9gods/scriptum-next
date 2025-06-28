@@ -6,4 +6,5 @@ export interface Note {
 	color: string;
 	isPinned: boolean;
 	createdAt: Date;
+	modifiedAt: Date;
 }

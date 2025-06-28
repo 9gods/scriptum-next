@@ -92,16 +92,6 @@ export const SigninForm = () => {
                   <div className="space-y-4">
 
                     <div className="w-full border-t border-white"></div>
-
-                    <Button
-                      type="button"
-                      variant="outline"
-                      className="w-full flex items-center justify-center gap-2"
-                      onClick={() => SignInButton("google")}
-                    >
-                      <Google />
-                      Continuar com Google
-                    </Button>
                   </div>
                 </FormControl>
                 <FormMessage />
@@ -111,7 +101,7 @@ export const SigninForm = () => {
           <div className="flex justify-center">
             <div className="mt-4 flex items-center gap-0 text-sm">
               Novo por aqui?
-              <Link href={"/auth/mainpage"}>
+              <Link href={"/auth/signup"}>
                 <Button type="button" variant={"link"} className="pl-1">Registre-se</Button>
               </Link>
             </div>

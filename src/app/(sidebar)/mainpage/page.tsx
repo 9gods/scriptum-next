@@ -1,7 +1,4 @@
 "use client"
-import { useState } from 'react'
-import { Sidebar } from '@/components/main-page/side-bar'
-import { Topbar } from '@/components/main-page/top-bar'
 import { NoteCard } from '@/components/main-page/note-card'
 import { ModeToggle } from "@/components/mode-toggle"
 import { NotesList } from '@/components/notes/notes-list'
@@ -10,7 +7,6 @@ const NOTES_TITLE = "Minhas Notas"
 const TEMPLATES_NOTES_TITLE = "Talvez você se interesse.."
 
 export default function HomePage() {
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true)
   
   const notes = [
     {
@@ -26,16 +22,11 @@ export default function HomePage() {
       links: ['roadmap']
     }
   ]
-
-  const toggleSidebar = () => setIsSidebarOpen(prev => !prev)
-
   return (
     <div className="flex h-full">
-      {isSidebarOpen && <Sidebar />}
       <ModeToggle className="absolute top-4 right-4" />
       
       <div className="flex-1 flex flex-col overflow-hidden">
-        <Topbar toggleSidebar={toggleSidebar} />
         
         <main className="flex-1 overflow-auto p-6 bg-background">
           <section className="mb-8">
