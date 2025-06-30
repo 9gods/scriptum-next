@@ -1,6 +1,7 @@
 import {Tag} from "@/domain/entities/tag";
 
 export interface Note {
+    color: string;
     id: string;
     title: string;
     content: string; // markdown
@@ -22,3 +23,4 @@ export interface NoteCardProps {
   className?: string;
   onClick?: () => void;
 }
+
