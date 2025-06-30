@@ -13,7 +13,7 @@ export const HeroSection = () => {
     "Giovane Comelli",
     "Rafael Gonçalves",
     "Eduarda Kacprzak",
-    "Giullia Villanova",
+    "Giullia Vilanova",
     "Maria Eduarda Kolitski",
   ];
 
