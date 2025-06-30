@@ -10,18 +10,8 @@ import {
   CardFooter,
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { NoteCardProps } from "@/domain/entities/note";
 
-interface NoteCardProps {
-  title: string;
-  content: string;
-  lastEdited: string;
-  tags?: string[];
-  isFavorite?: boolean;
-  isPinned?: boolean;
-  color?: string;
-  className?: string;
-  onClick?: () => void;
-}
 
 export function NoteCard({
   title,
@@ -34,8 +24,8 @@ export function NoteCard({
   className,
   onClick,
 }: NoteCardProps) {
-  // Remove markdown formatting for preview
-  const plainContent = content.replace(/[#*_~`\|\[\]]/g, "");
+  
+  const plainContent = content.replace(/[#*_~`\|\[\]]/, "");
 
   return (
     <Card

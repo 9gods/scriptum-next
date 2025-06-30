@@ -1,12 +1,20 @@
+
 "use client";
 
-import { NoteForm } from "@/components/notes/note-form";
+import { useRouter } from 'next/navigation';
+import { NoteForm } from '@/components/notes/note-form';
 
 export default function NewNotePage() {
-	return (
-		<div className="flex flex-1 bg-red-500">
+  const router = useRouter();
 
-<NoteForm />
-		</div>
-	);
+  const handleSuccess = () => {
+    router.push('/');
+    router.refresh(); 
+  };
+
+  return (
+    <NoteForm 
+      onSuccess={handleSuccess}
+    />
+  );
 }

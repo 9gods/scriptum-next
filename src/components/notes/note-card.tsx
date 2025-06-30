@@ -1,31 +1,21 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardHeader,
-  CardTitle,
-  CardContent,
-  CardFooter,
-} from "@/components/ui/card";
+import { Card, CardHeader, CardTitle, CardContent, CardFooter } from "@/components/ui/card";
 import { PinIcon, TagsIcon, EditIcon, TrashIcon } from "lucide-react";
 import Link from "next/link";
 import { cleanMarkdownText, formatBrazilianDate } from "@/lib/note-utils";
 import type { Note } from "@/domain/entities/note";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
-import { useEffect, useState } from "react";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 
-export type NoteCardProps = {
+type Feedback = {
+  message: string;
+  type: 'success' | 'error';
+};
+
+type NoteCardProps = {
   note: Note;
   onDelete?: (noteId: string) => void;
   onTogglePin?: (noteId: string) => void;
@@ -33,9 +23,8 @@ export type NoteCardProps = {
 
 export const NoteCard = ({ note, onDelete, onTogglePin }: NoteCardProps) => {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-  const [isDeleting, setIsDeleting] = useState(false);
-  const [isTogglingPin, setIsTogglingPin] = useState(false);
-  const [feedback, setFeedback] = useState<{message: string; type: 'success' | 'error'} | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [feedback, setFeedback] = useState<Feedback | null>(null);
   const router = useRouter();
 
   const cardStyle = {
@@ -43,79 +32,61 @@ export const NoteCard = ({ note, onDelete, onTogglePin }: NoteCardProps) => {
     borderColor: note.color ? `${note.color}50` : "hsl(var(--border))",
   };
 
-  useEffect(() => {
-    if (feedback) {
-      const timer = setTimeout(() => setFeedback(null), 3000);
-      return () => clearTimeout(timer);
-    }
-  }, [feedback]);
+  const showFeedback = (message: string, type: Feedback['type']) => {
+    setFeedback({ message, type });
+    setTimeout(() => setFeedback(null), 3000);
+  };
 
-  const handleDelete = async () => {
+  const handleApiAction = async (
+    url: string,
+    method: string,
+    successMessage: string,
+    callback?: () => void,
+    body?: any
+  ) => {
     try {
-      setIsDeleting(true);
-      
-      const response = await fetch(`/api/notes/${note.id}`, {
-        method: "DELETE",
+      setIsLoading(true);
+      const response = await fetch(url, {
+        method,
+        headers: body ? { "Content-Type": "application/json" } : undefined,
+        body: body ? JSON.stringify(body) : undefined,
       });
 
-      if (!response.ok) {
-        throw new Error("Falha ao excluir nota");
-      }
+      if (!response.ok) throw new Error("Operação falhou");
 
-      setFeedback({
-        message: "Nota excluída com sucesso!",
-        type: 'success'
-      });
-
-      if (onDelete) {
-        onDelete(note.id);
-      }
+      showFeedback(successMessage, 'success');
+      callback?.();
     } catch (error) {
-      setFeedback({
-        message: error instanceof Error ? error.message : "Ocorreu um erro ao excluir a nota",
-        type: 'error'
-      });
+      showFeedback(
+        error instanceof Error ? error.message : "Ocorreu um erro",
+        'error'
+      );
     } finally {
-      setIsDeleting(false);
-      setIsDeleteDialogOpen(false);
+      setIsLoading(false);
     }
   };
 
-  const handleTogglePin = async (e: React.MouseEvent) => {
+  const handleDelete = () => handleApiAction(
+    `/api/notes/${note.id}`,
+    "DELETE",
+    "Nota excluída com sucesso!",
+    () => {
+      setIsDeleteDialogOpen(false);
+      onDelete?.(note.id);
+    }
+  );
+
+  const handleTogglePin = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
     
-    try {
-      setIsTogglingPin(true);
-      
-      const response = await fetch(`/api/notes/${note.id}/pin`, {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ isPinned: !note.isPinned }),
-      });
-
-      if (!response.ok) {
-        throw new Error("Falha ao atualizar status de fixação");
-      }
-
-      setFeedback({
-        message: note.isPinned ? "Nota desfixada!" : "Nota fixada!",
-        type: 'success'
-      });
-
-      if (onTogglePin) {
-        onTogglePin(note.id);
-      }
-    } catch (error) {
-      setFeedback({
-        message: error instanceof Error ? error.message : "Ocorreu um erro ao atualizar a nota",
-        type: 'error'
-      });
-    } finally {
-      setIsTogglingPin(false);
-    }
+    handleApiAction(
+      `/api/notes/${note.id}/pin`,
+      "PATCH",
+      note.isPinned ? "Nota desfixada!" : "Nota fixada!",
+      () => onTogglePin?.(note.id),
+      { isPinned: !note.isPinned }
+    );
   };
 
   return (
@@ -146,7 +117,7 @@ export const NoteCard = ({ note, onDelete, onTogglePin }: NoteCardProps) => {
               onClick={handleTogglePin}
               className="h-8 w-8 p-0"
               aria-label={note.isPinned ? "Desfixar nota" : "Fixar nota"}
-              disabled={isTogglingPin}
+              disabled={isLoading}
             >
               <PinIcon
                 className={`h-4 w-4 ${
@@ -163,6 +134,7 @@ export const NoteCard = ({ note, onDelete, onTogglePin }: NoteCardProps) => {
             </p>
           )}
         </CardHeader>
+        
         <CardContent className="flex-grow space-y-3">
           <p className="line-clamp-4 text-sm text-muted-foreground">
             {cleanMarkdownText(note.content)}
@@ -179,7 +151,7 @@ export const NoteCard = ({ note, onDelete, onTogglePin }: NoteCardProps) => {
                   {tag}
                 </span>
               ))}
-              {note.tags && note.tags.length > 3 && (
+              {note.tags?.length > 3 && (
                 <span className="text-xs text-muted-foreground self-center">
                   +{note.tags.length - 3}
                 </span>
@@ -187,6 +159,7 @@ export const NoteCard = ({ note, onDelete, onTogglePin }: NoteCardProps) => {
             </div>
           </div>
         </CardContent>
+        
         <CardFooter className="flex justify-end gap-2 p-4 pt-0">
           <Button 
             variant="outline" 
@@ -209,38 +182,33 @@ export const NoteCard = ({ note, onDelete, onTogglePin }: NoteCardProps) => {
             }}
             className="gap-1"
             aria-label="Excluir nota"
-            disabled={isDeleting}
+            disabled={isLoading}
           >
             <TrashIcon className="h-3.5 w-3.5" />
-            {isDeleting ? "Excluindo..." : "Excluir"}
+            {isLoading ? "Processando..." : "Excluir"}
           </Button>
         </CardFooter>
       </Card>
 
-      {/* Confirmation Dialog */}
-      <AlertDialog
-        open={isDeleteDialogOpen}
-        onOpenChange={setIsDeleteDialogOpen}
-      >
+      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Confirmar exclusão</AlertDialogTitle>
             <AlertDialogDescription>
-              Tem certeza que deseja excluir esta nota? Esta ação não pode ser
-              desfeita.
+              Tem certeza que deseja excluir esta nota? Esta ação não pode ser desfeita.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={isDeleting}>Cancelar</AlertDialogCancel>
+            <AlertDialogCancel disabled={isLoading}>Cancelar</AlertDialogCancel>
             <AlertDialogAction
               onClick={(e) => {
                 e.preventDefault();
                 handleDelete();
               }}
-              disabled={isDeleting}
+              disabled={isLoading}
               className="bg-destructive hover:bg-destructive/90"
             >
-              {isDeleting ? "Excluindo..." : "Confirmar Exclusão"}
+              {isLoading ? "Processando..." : "Confirmar Exclusão"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
