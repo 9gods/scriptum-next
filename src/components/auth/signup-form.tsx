@@ -20,8 +20,13 @@ import { toast } from "sonner";
 import { useState } from "react";
 import { CardContent, CardFooter } from "../ui/card";
 import Link from "next/link";
+import { useAuthStore } from "@/lib/store/use-auth-store";
+import { useRouter } from "next/navigation";
 
 export const SignupForm = () => {
+  const register = useAuthStore((state) => state.register);
+  const isLoading = useAuthStore((state) => state.isLoading);
+  const router = useRouter();
   const form = useForm<UserFormValuesWithPassword>({
     resolver: zodResolver(userSchemaWithPassword),
     defaultValues: {
@@ -34,14 +39,22 @@ export const SignupForm = () => {
   });
 
   async function onSubmit(values: UserFormValuesWithPassword) {
-    // const submissionPayload = await signupService(values);
-    // if (!submissionPayload.success) {
-    //   toast.error("Opa! Algo deu errado...", {
-    //     description: "Por favor, verifique os campos.",
-    //   });
-    // }
-    toast.success("Conta criada com sucesso!");
-    form.reset();
+    try {
+      await register({
+        name: values.name,
+        email: values.email,
+        password: values.password,
+        avatarUrl: values.avatarUrl
+      });
+
+      toast.success("Conta criada com sucesso!");
+      router.push("/dashboard"); // Redirect to dashboard after successful registration
+    } catch (error) {
+      console.error("Registration error:", error);
+      toast.error("Falha no cadastro", {
+        description: "Verifique os campos e tente novamente."
+      });
+    }
   }
 
   return (
@@ -129,8 +142,8 @@ export const SignupForm = () => {
 
         </CardContent>
         <CardFooter className="justify-end">
-          <Button type="submit" disabled={form.formState.isSubmitting}>
-            {form.formState.isSubmitting ? "Enviando…" : "Criar conta"}
+          <Button type="submit" disabled={isLoading}>
+            {isLoading ? "Criando conta…" : "Criar conta"}
           </Button>
         </CardFooter>
       </form>

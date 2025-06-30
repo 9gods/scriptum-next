@@ -1,6 +1,6 @@
 "use client";
 
-import { Button } from "../ui/button";
+import {Button} from "../ui/button";
 import {
   Form,
   FormControl,
@@ -9,21 +9,26 @@ import {
   FormLabel,
   FormMessage,
 } from "../ui/form";
-import { Input } from "../ui/input";
-import { useForm } from "react-hook-form";
+import {Input} from "../ui/input";
+import {useForm} from "react-hook-form";
 import {
   type UserFormValuesWithPassword,
   userSchemaWithPassword,
 } from "@/schemas/user-schema";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { toast } from "sonner";
-import { useState } from "react";
-import { CardContent, CardFooter } from "../ui/card";
+import {zodResolver} from "@hookform/resolvers/zod";
+import {toast} from "sonner";
+import {useState} from "react";
+import {CardContent, CardFooter} from "../ui/card";
 import Link from "next/link";
-
+import {useAuthStore} from "@/lib/store/use-auth-store";
+import {useRouter} from "next/navigation";
 
 
 export const SigninForm = () => {
+  const login = useAuthStore((state) => state.login);
+  const isLoading = useAuthStore((state) => state.isLoading);
+  const router = useRouter();
+
   const form = useForm<UserFormValuesWithPassword>({
     resolver: zodResolver(userSchemaWithPassword),
     defaultValues: {
@@ -34,8 +39,20 @@ export const SigninForm = () => {
   });
 
   async function onSubmit(values: UserFormValuesWithPassword) {
-    toast.success("Conta criada com sucesso!");
-    form.reset();
+    try {
+      await login({
+        email: values.email,
+        password: values.password
+      });
+
+      toast.success("Login realizado com sucesso!");
+      router.push("/dashboard");
+    } catch (error) {
+      console.error("Login error:", error);
+      toast.error("Falha no login", {
+        description: "Verifique seu e-mail e senha e tente novamente."
+      });
+    }
   }
 
   return (
@@ -48,7 +65,7 @@ export const SigninForm = () => {
           <FormField
             control={form.control}
             name="email"
-            render={({ field }) => (
+            render={({field}) => (
               <FormItem className="mt-4">
                 <FormLabel>E-mail</FormLabel>
                 <FormControl>
@@ -59,7 +76,7 @@ export const SigninForm = () => {
                     {...field}
                   />
                 </FormControl>
-                <FormMessage />
+                <FormMessage/>
               </FormItem>
             )}
           />
@@ -67,7 +84,7 @@ export const SigninForm = () => {
           <FormField
             control={form.control}
             name="password"
-            render={({ field }) => (
+            render={({field}) => (
               <FormItem className="mt-4">
                 <FormLabel>Senha</FormLabel>
                 <FormControl>
@@ -78,7 +95,7 @@ export const SigninForm = () => {
                     {...field}
                   />
                 </FormControl>
-                <FormMessage />
+                <FormMessage/>
               </FormItem>
             )}
           />
@@ -94,7 +111,7 @@ export const SigninForm = () => {
                     <div className="w-full border-t border-white"></div>
                   </div>
                 </FormControl>
-                <FormMessage />
+                <FormMessage/>
               </FormItem>
             )}
           />
@@ -105,12 +122,12 @@ export const SigninForm = () => {
                 <Button type="button" variant={"link"} className="pl-1">Registre-se</Button>
               </Link>
             </div>
-  
+
           </div>
         </CardContent>
         <CardFooter className="justify-end">
-          <Button type="submit" disabled={form.formState.isSubmitting}>
-            {form.formState.isSubmitting ? "Enviando…" : "Entrar"}
+          <Button type="submit">
+            {isLoading ? "Entrando…" : "Entrar"}
           </Button>
         </CardFooter>
       </form>
