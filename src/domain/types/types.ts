@@ -8,3 +8,12 @@ export interface EmptyStateProps {
 	icon?: keyof typeof icons;
 	className?: string;
 }
+
+export interface Note {
+  id: string;
+  title: string;
+  content: string;
+  tags: string[];
+  links: string[];
+  lastEdited?: string;
+}

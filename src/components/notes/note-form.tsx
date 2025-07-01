@@ -20,8 +20,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { MarkdownPreview } from "@/components/ui/markdown-preview";
 import { useRouter } from "next/navigation";
 import { TagsInput } from "@/components/notes/tags-input";
-import { apiService } from "@/domain/service/api";
-import { useSession } from "next-auth/react";
+import { ColorPicker } from "@/components/notes/color-picker";
 
 interface NoteFormProps {
   initialData?: NoteFormValues & { id?: string };
@@ -37,12 +36,11 @@ const DEFAULT_NOTE_VALUES: NoteFormValues = {
   title: "",
   content: "",
   isPinned: false,
-  color: "#FFFF",
+  color: "#FFFFFF",
   tags: []
 };
 
 export function NoteForm({ initialData, onSuccess }: NoteFormProps) {
-  const { data: session } = useSession();
   const [wordCount, setWordCount] = useState(0);
   const [charCount, setCharCount] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -56,32 +54,33 @@ export function NoteForm({ initialData, onSuccess }: NoteFormProps) {
 
   const content = form.watch("content");
   const tags = form.watch("tags");
+  const color = form.watch("color");
 
   // Carrega os dados da nota se for edição
   useEffect(() => {
-    const fetchNoteData = async () => {
-      if (!initialData?.id || !session?.user?.id) return;
+    if (!initialData?.id) return;
+    
+    try {
+      const notes = JSON.parse(localStorage.getItem('notes') || '[]');
+      const note = notes.find((n: any) => n.id === initialData.id);
       
-      try {
-        const note = await apiService.getNoteById(initialData.id);
+      if (note) {
         form.reset({
           title: note.title,
           content: note.content,
           isPinned: note.isPinned || false,
-          color: note.color || "#FFFF",
-          tags: note.tags?.map(t => t.name) || []
-        });
-      } catch (error) {
-        console.error("Failed to fetch note data:", error);
-        setFeedback({
-          message: "Falha ao carregar os dados da nota",
-          type: 'error'
+          color: note.color || "#FFFFFF",
+          tags: note.tags || []
         });
       }
-    };
-
-    fetchNoteData();
-  }, [initialData?.id, form, session]);
+    } catch (error) {
+      console.error("Failed to fetch note data:", error);
+      setFeedback({
+        message: "Falha ao carregar os dados da nota",
+        type: 'error'
+      });
+    }
+  }, [initialData?.id, form]);
 
   // Contagem de palavras e caracteres
   useEffect(() => {
@@ -100,38 +99,44 @@ export function NoteForm({ initialData, onSuccess }: NoteFormProps) {
 
   // Manipulador de envio do formulário
   const onSubmit = useCallback(async (values: NoteFormValues) => {
-    if (!session?.user?.id) return;
-    
     setIsSubmitting(true);
     try {
+      const notes = JSON.parse(localStorage.getItem('notes') || '[]');
       const noteData = {
+        id: initialData?.id || Date.now().toString(),
         title: values.title,
         content: values.content,
         isPinned: values.isPinned,
         color: values.color,
         tags: values.tags || [],
-        userId: session.user.id
+        createdAt: initialData?.id 
+          ? notes.find((n: any) => n.id === initialData.id)?.createdAt || new Date().toISOString()
+          : new Date().toISOString(),
+        updatedAt: new Date().toISOString()
       };
 
-      let result;
+      let updatedNotes;
       
       if (initialData?.id) {
         // Atualizar nota existente
-        result = await apiService.updateNote(initialData.id, noteData);
+        updatedNotes = notes.map((n: any) => 
+          n.id === initialData.id ? noteData : n
+        );
         setFeedback({
           message: "Nota atualizada com sucesso!",
           type: 'success'
         });
       } else {
         // Criar nova nota
-        result = await apiService.createNote(noteData);
+        updatedNotes = [...notes, noteData];
         setFeedback({
           message: "Nota criada com sucesso!",
           type: 'success'
         });
       }
 
-      onSuccess?.() || (!initialData?.id && router.push(`/notes/${result.id}`));
+      localStorage.setItem('notes', JSON.stringify(updatedNotes));
+      onSuccess?.() || (!initialData?.id && router.push(`/notes/${noteData.id}`));
     } catch (error) {
       console.error("Failed to save note:", error);
       setFeedback({
@@ -141,7 +146,7 @@ export function NoteForm({ initialData, onSuccess }: NoteFormProps) {
     } finally {
       setIsSubmitting(false);
     }
-  }, [initialData?.id, onSuccess, router, session]);
+  }, [initialData?.id, onSuccess, router]);
 
   // Atalhos de teclado para Markdown
   const handleKeyDown = useCallback((e: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -245,24 +250,44 @@ export function NoteForm({ initialData, onSuccess }: NoteFormProps) {
                 </div>
               </div>
 
-              {/* Tags Input */}
-              <div className="mb-4">
-                <FormField
-                  control={form.control}
-                  name="tags"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Tags</FormLabel>
-                      <FormControl>
-                        <TagsInput
-                          selected={field.value || []}
-                          onChange={(tags) => field.onChange(tags)}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+              {/* Tags e Cor */}
+              <div className="flex gap-4 mb-4">
+                <div className="flex-1">
+                  <FormField
+                    control={form.control}
+                    name="tags"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Tags</FormLabel>
+                        <FormControl>
+                          <TagsInput
+                            selected={field.value || []}
+                            onChange={(tags) => field.onChange(tags)}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+                <div className="w-32">
+                  <FormField
+                    control={form.control}
+                    name="color"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Cor</FormLabel>
+                        <FormControl>
+                          <ColorPicker
+                            value={field.value}
+                            onChange={field.onChange}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
               </div>
 
               {/* Editor Area */}
@@ -298,7 +323,10 @@ export function NoteForm({ initialData, onSuccess }: NoteFormProps) {
                 </TabsContent>
 
                 <TabsContent value="preview" className="flex-1 min-h-[400px]">
-                  <div className="h-full p-4 overflow-auto prose dark:prose-invert max-w-none border rounded-lg">
+                  <div 
+                    className="h-full p-4 overflow-auto prose dark:prose-invert max-w-none border rounded-lg"
+                    style={{ backgroundColor: color }}
+                  >
                     <MarkdownPreview
                       content={content || "*Nada para pré-visualizar*"}
                     />

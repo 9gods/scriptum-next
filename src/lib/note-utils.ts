@@ -1,49 +1,35 @@
-import type { Note } from "@/domain/entities/note";
+import { Note } from "@/domain/entities/note";
 
-/**
- * Remove formatação Markdown do texto
- * @param text - formatação Markdown
- * @returns texto limpo sem formatação Markdown
- */
+// cleanMarkdownText melhorado
 export const cleanMarkdownText = (text: string): string => {
-	const markdownSymbols = /[#*`_\[\]!]/g;
-	const listItems = /^-\s+/gm;
-
-	return text.replace(markdownSymbols, "").replace(listItems, "").slice(0, 200);
+  if (typeof text !== "string") {
+    return ""; // Retorna vazio se não for string
+  }
+  const markdownSymbols = /[#*`_~`\|\[\]!]/g;
+  return text.replace(markdownSymbols, "").slice(0, 200);
 };
 
-// instancia unica do formatter para evitar ficar criando a cada chamada
-const brazDateFormatter = new Intl.DateTimeFormat("pt-BR", {
-	day: "2-digit",
-	month: "short",
-	year: "numeric",
-});
-
-/**
- * formata data para o padrão brasileiro
- * @param input - Data a ser formatada. Pode ser `Date`, timestamp (`number`) ou `string` compativel.
- * @returns data formatada
- * @throws {Error} auando a data e invalida ou nao pode ser interpretada.
- */
+// formatBrazilianDate mais robusta
 export function formatBrazilianDate(input: Date | number | string): string {
-	const date = input instanceof Date ? input : new Date(input);
-	if (Number.isNaN(date.getTime())) {
-		throw new Error(`Invalid Date: ${input}`);
-	}
-
-	return brazDateFormatter.format(date);
+  const date = new Date(typeof input === "string" ? input + "T00:00:00" : input);
+  if (Number.isNaN(date.getTime())) {
+    throw new Error(`Formato de data inválido: "${input}". Use Date, timestamp ou string ISO.`);
+  }
+  return new Intl.DateTimeFormat("pt-BR", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  }).format(date);
 }
 
-/**
- * Ordena notas por fixadas e depois por data (mais recente primeiro)
- * @param notes - Array de notas a serem ordenadas
- * @returns Array de notas ordenadas
- */
-export const sortNotes = (notes: Array<Note>): Array<Note> =>
-	notes
-		.slice() // cópia
-		.sort(
-			(a, b) =>
-				+b.isPinned - +a.isPinned ||
-				b.createdAt.getTime() - a.createdAt.getTime(),
-		);
+// sortNotes mais legível
+export const sortNotes = (notes: Array<Note>): Array<Note> => {
+  return [...notes].sort((a, b) => {
+    if (a.isPinned !== b.isPinned) {
+      return Number(b.isPinned) - Number(a.isPinned);
+    }
+    const dateA = a.createdAt instanceof Date ? a.createdAt : new Date(a.createdAt);
+    const dateB = b.createdAt instanceof Date ? b.createdAt : new Date(b.createdAt);
+    return dateB.getTime() - dateA.getTime();
+  });
+};
