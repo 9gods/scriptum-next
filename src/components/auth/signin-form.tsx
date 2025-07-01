@@ -141,7 +141,7 @@ export const SigninForm = () => {
                     </div>
                 </CardContent>
                 <CardFooter className="justify-end">
-                    <Button type="submit" disabled={isLoading}>
+                    <Button type="submit">
                         {isLoading ? "Entrando…" : "Entrar"}
                     </Button>
                 </CardFooter>
