@@ -2,7 +2,7 @@
 import { NoteCard } from '@/components/main-page/note-card'
 import { ModeToggle } from "@/components/mode-toggle"
 import { NotesList } from '@/components/notes/notes-list'
-import { useState, useCallback, useEffect } from 'react'
+import { useState, useCallback } from 'react'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -16,19 +16,47 @@ import {
 import { FiTrash2, FiEdit } from 'react-icons/fi'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
-import { apiService } from '@/domain/service/api'
-import { useSession } from 'next-auth/react'
-import { Note } from '@/domain/entities/note'
+
+interface Note {
+  id: string;
+  title: string;
+  content: string;
+  tags: string[];
+  links: string[];
+  lastEdited?: string;
+}
 
 const TEMPLATES_NOTES_TITLE = "Talvez você se interesse..."
 const NOTES_TITLE = "Minhas Notas"
 
 export default function HomePage() {
-  const { data: session } = useSession()
-  const [notes, setNotes] = useState<Note[]>([])
-  const [isLoading, setIsLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-  
+  const [notes, setNotes] = useState<Note[]>([
+    {
+      id: '1',
+      title: 'Sistemas de Notas Avançados',
+      content: 'Técnicas eficientes para organização pessoal e profissional...',
+      tags: ['produtividade', 'pesquisa'],
+      links: ['metodos-eficientes'],
+      lastEdited: new Date().toISOString()
+    },
+    {
+      id: '2',
+      title: 'Ideias para Aplicativo',
+      content: 'Roadmap de desenvolvimento para a versão 1.0...',
+      tags: ['desenvolvimento'],
+      links: ['roadmap'],
+      lastEdited: new Date().toISOString()
+    },
+    {
+      id: '3',
+      title: 'Dicas de Estudo',
+      content: 'Como melhorar seu foco e retenção de conhecimento...',
+      tags: ['educação', 'aprendizado'],
+      links: ['tecnicas-estudo'],
+      lastEdited: new Date().toISOString()
+    }
+  ])
+
   const [noteToDelete, setNoteToDelete] = useState<Note | null>(null)
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false)
   
@@ -37,43 +65,15 @@ export default function HomePage() {
   const [editedTitle, setEditedTitle] = useState('')
   const [editedContent, setEditedContent] = useState('')
 
-  // Carrega as notas do usuário
-  useEffect(() => {
-    const fetchNotes = async () => {
-      if (!session?.user?.id) return
-      
-      try {
-        setIsLoading(true)
-        const userNotes = await apiService.getNotes(session.user.id)
-        setNotes(userNotes)
-        setError(null)
-      } catch (err) {
-        console.error('Failed to fetch notes:', err)
-        setError('Falha ao carregar notas. Tente novamente mais tarde.')
-      } finally {
-        setIsLoading(false)
-      }
-    }
-
-    fetchNotes()
-  }, [session])
-
-  const handleDeleteNote = useCallback(async () => {
-    if (!noteToDelete?.id || !session?.user?.id) return
-    
-    try {
-      await apiService.deleteNote(noteToDelete.id)
+  const handleDeleteNote = useCallback(() => {
+    if (noteToDelete) {
       setNotes(prevNotes => 
         prevNotes.filter(note => note.id !== noteToDelete.id)
       )
-    } catch (err) {
-      console.error('Failed to delete note:', err)
-      setError('Falha ao excluir nota. Tente novamente.')
-    } finally {
       setIsDeleteModalOpen(false)
       setNoteToDelete(null)
     }
-  }, [noteToDelete, session])
+  }, [noteToDelete])
 
   const openDeleteModal = useCallback((note: Note) => {
     setNoteToDelete(note)
@@ -87,67 +87,24 @@ export default function HomePage() {
     setIsEditModalOpen(true)
   }, [])
 
-  const handleSaveEdit = useCallback(async () => {
-    if (!noteToEdit?.id || !session?.user?.id) return
-    
-    try {
-      const updatedNote = await apiService.updateNote(noteToEdit.id, {
-        ...noteToEdit,
-        title: editedTitle,
-        content: editedContent,
-        lastEdited: new Date().toISOString()
-      })
-      
+  const handleSaveEdit = useCallback(() => {
+    if (noteToEdit) {
       setNotes(prevNotes =>
         prevNotes.map(note =>
-          note.id === noteToEdit.id ? updatedNote : note
+          note.id === noteToEdit.id
+            ? {
+                ...note,
+                title: editedTitle,
+                content: editedContent,
+                lastEdited: new Date().toISOString()
+              }
+            : note
         )
       )
       setIsEditModalOpen(false)
       setNoteToEdit(null)
-    } catch (err) {
-      console.error('Failed to update note:', err)
-      setError('Falha ao atualizar nota. Tente novamente.')
     }
-  }, [noteToEdit, editedTitle, editedContent, session])
-
-  const handleCreateNote = useCallback(async () => {
-    if (!session?.user?.id) return
-    
-    try {
-      const newNote = await apiService.createNote({
-        title: 'Nova Nota',
-        content: '',
-        tags: [],
-        links: [],
-        userId: session.user.id,
-        lastEdited: new Date().toISOString()
-      })
-      
-      setNotes(prevNotes => [newNote, ...prevNotes])
-      // Abre o modal de edição para a nova nota
-      openEditModal(newNote)
-    } catch (err) {
-      console.error('Failed to create note:', err)
-      setError('Falha ao criar nova nota. Tente novamente.')
-    }
-  }, [session, openEditModal])
-
-  if (isLoading) {
-    return (
-      <div className="flex justify-center items-center h-full">
-        <p>Carregando notas...</p>
-      </div>
-    )
-  }
-
-  if (error) {
-    return (
-      <div className="flex justify-center items-center h-full">
-        <p className="text-red-500">{error}</p>
-      </div>
-    )
-  }
+  }, [noteToEdit, editedTitle, editedContent])
 
   return (
     <div className="flex h-full">
@@ -157,18 +114,13 @@ export default function HomePage() {
         <main className="flex-1 overflow-auto">
           {/* Template Notes Section */}
           <section className="py-8 px-4 max-w-6xl mx-auto">
-            <div className="flex justify-between items-center mb-8">
-              <div>
-                <h2 className="text-2xl font-bold text-gray-800 dark:text-gray-100">
-                  {TEMPLATES_NOTES_TITLE}
-                </h2>
-                <p className="text-gray-500 dark:text-gray-400 mt-2">
-                  {notes.length} {notes.length === 1 ? 'sugestão disponível' : 'sugestões disponíveis'}
-                </p>
-              </div>
-              <Button onClick={handleCreateNote}>
-                Criar Nova Nota
-              </Button>
+            <div className="text-center mb-8">
+              <h2 className="text-2xl font-bold text-gray-800 dark:text-gray-100">
+                {TEMPLATES_NOTES_TITLE}
+              </h2>
+              <p className="text-gray-500 dark:text-gray-400 mt-2">
+                {notes.length} {notes.length === 1 ? 'sugestão disponível' : 'sugestões disponíveis'}
+              </p>
             </div>
             
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 justify-items-center">
@@ -178,9 +130,8 @@ export default function HomePage() {
                   className="relative w-full max-w-md group"
                 >
                   <NoteCard 
-                    note={note}
-                    className="h-full shadow-md hover:shadow-lg transition-shadow"                  
-                  />
+                  note={''} {...note}
+                  className="h-full shadow-md hover:shadow-lg transition-shadow"                  />
                   <div className="absolute top-0 right-0 flex gap-1">
                     <button
                       onClick={() => openEditModal(note)}
@@ -203,7 +154,7 @@ export default function HomePage() {
           </section>
           
           {/* User Notes Section */}
-          <NotesSection notes={notes} />
+          <NotesSection />
         </main>
       </div>
 
@@ -293,13 +244,13 @@ export default function HomePage() {
   )
 }
 
-function NotesSection({ notes }: { notes: Note[] }) {
+function NotesSection() {
   return (
     <section className="container mx-auto py-8 px-4">
       <div className="mb-8 text-center">
         <h1 className="text-3xl font-bold">{NOTES_TITLE}</h1>
       </div>
-      <NotesList notes={notes} />
+      <NotesList />
     </section>
   )
 }
