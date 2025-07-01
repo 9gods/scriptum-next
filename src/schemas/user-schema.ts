@@ -19,5 +19,18 @@ export const userSchemaWithPassword = userSchema.extend({
     .regex(/^(?=.*[A-Za-z])(?=.*\d).+$/, "Senha deve conter letras e números."),
 });
 
+// Schema específico para login (apenas email e password)
+export const loginSchema = z.object({
+  email: z
+    .string({ required_error: "E-mail é obrigatório." })
+    .email("Formato de e-mail inválido."),
+  password: z
+    .string({ required_error: "Senha é obrigatória." })
+    .min(8, "Senha deve ter pelo menos 8 caracteres.")
+    .max(100, "Senha pode ter no máximo 100 caracteres.")
+    .regex(/^(?=.*[A-Za-z])(?=.*\d).+$/, "Senha deve conter letras e números."),
+});
+
 export type UserFormValues = z.infer<typeof userSchema>;
 export type UserFormValuesWithPassword = z.infer<typeof userSchemaWithPassword>;
+export type LoginFormValues = z.infer<typeof loginSchema>;

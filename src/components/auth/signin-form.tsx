@@ -12,25 +12,23 @@ import {
 import {Input} from "../ui/input";
 import {useForm} from "react-hook-form";
 import {
-  type UserFormValuesWithPassword,
-  userSchemaWithPassword,
+  type LoginFormValues,
+  loginSchema,
 } from "@/schemas/user-schema";
 import {zodResolver} from "@hookform/resolvers/zod";
 import {toast} from "sonner";
-import {useState, useEffect} from "react"; // Adicionado useEffect
+import {useState} from "react";
 import {CardContent, CardFooter} from "../ui/card";
 import Link from "next/link";
-import {useAuthStore} from "@/lib/store/use-auth-store";
 import {useRouter} from "next/navigation";
-import {apiService} from "@/domain/service/api";
-import {signIn} from "next-auth/react";
+import axios from "axios";
 
 export const SigninForm = () => {
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
 
-  const form = useForm<UserFormValuesWithPassword>({
-    resolver: zodResolver(userSchemaWithPassword),
+  const form = useForm<LoginFormValues>({
+    resolver: zodResolver(loginSchema),
     defaultValues: {
       email: "",
       password: "",
@@ -38,58 +36,64 @@ export const SigninForm = () => {
     mode: "onTouched",
   });
 
-  // Adicionado para debug
-  useEffect(() => {
-    const subscription = form.watch((value) => {
-      console.log('Valores do formulário alterados:', value);
-    });
-    return () => subscription.unsubscribe();
-  }, [form]);
-
-  async function onSubmit(values: UserFormValuesWithPassword) {
-    console.log('Submit iniciado - valores:', {
-      email: values.email,
-      password: '[PROTECTED]'
-    });
-
-    const isValid = await form.trigger();
-    console.log('Validação do formulário:', isValid);
-    console.log('Erros:', form.formState.errors);
-
-    if (!isValid) {
-      console.error('Formulário inválido - submit abortado');
-      return;
-    }
-
+  async function onSubmit(values: LoginFormValues) {
+    console.log("onSubmit chamado!");
+    console.log("Valores do formulário:", values);
     setIsLoading(true);
-
+    console.log("testeeeee");
     try {
-      console.log('Chamando apiService.login...');
-      await useAuthStore.getState().login({
+      // Chamada direta ao backend
+      const response = await axios.post("http://localhost:8080/api/auth/login", {
         email: values.email,
-        password: values.password
+        password: values.password,
       });
-      router.push("/mainpage");
-
-      toast.success("Login realizado com sucesso!");
-      router.push("/mainpage");
-    } catch (error) {
-      console.error('Erro no processo de login:', error);
-      toast.error("Falha no login. Verifique suas credenciais.");
+      const data = response.data;
+      if (data && data.token) {
+        // Salva o token e dados do usuário no localStorage
+        localStorage.setItem(
+          "auth-storage",
+          JSON.stringify({
+            state: {
+              token: data.token,
+              user: {
+                id: data.userId,
+                name: data.name,
+                email: data.email,
+              },
+            },
+          })
+        );
+        toast.success("Login realizado com sucesso!");
+        router.push("/mainpage");
+        router.refresh();
+      } else {
+        toast.error("Falha no login. Verifique suas credenciais.");
+      }
+    } catch (error: any) {
+      if (error.response && error.response.status === 401) {
+        toast.error("Credenciais inválidas.");
+      } else {
+        toast.error("Ocorreu um erro inesperado. Tente novamente.");
+      }
+      console.error("Erro no login:", error);
     } finally {
       setIsLoading(false);
-      console.log('Processo de login finalizado');
     }
   }
+
+  // Adicionar log para verificar erros de validação
+  const formErrors = form.formState.errors;
+  console.log("Erros do formulário:", formErrors);
 
   return (
     <Form {...form}>
       <form
-        onSubmit={form.handleSubmit(onSubmit, (errors) => {
-          console.log('Erros no submit:', errors);
-        })}
+        onSubmit={(e) => {
+          console.log("Form submit event disparado!");
+          form.handleSubmit(onSubmit)(e);
+        }}
         className="space-y-4 max-w-md"
-        noValidate // Para testar apenas a validação do react-hook-form
+        noValidate
       >
         <CardContent>
           <FormField
@@ -104,10 +108,6 @@ export const SigninForm = () => {
                     autoComplete="email"
                     placeholder="nome@exemplo.com"
                     {...field}
-                    onChange={(e) => {
-
-                      field.onChange(e);
-                    }}
                   />
                 </FormControl>
                 <FormMessage/>
@@ -127,10 +127,6 @@ export const SigninForm = () => {
                     autoComplete="current-password"
                     placeholder="Digite sua senha"
                     {...field}
-                    onChange={(e) => {
-
-                      field.onChange(e);
-                    }}
                   />
                 </FormControl>
                 <FormMessage/>
@@ -151,7 +147,6 @@ export const SigninForm = () => {
           <Button
             type="submit"
             disabled={isLoading}
-            onClick={() => console.log('Botão clicado - estado atual:', form.getValues())}
           >
             {isLoading ? "Entrando…" : "Entrar"}
           </Button>
