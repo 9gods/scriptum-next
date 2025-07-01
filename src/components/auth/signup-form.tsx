@@ -20,12 +20,10 @@ import { toast } from "sonner";
 import { useState } from "react";
 import { CardContent, CardFooter } from "../ui/card";
 import Link from "next/link";
-import { useAuthStore } from "@/lib/store/use-auth-store";
 import { useRouter } from "next/navigation";
 import { apiService } from "@/domain/service/api";
-import { signIn } from "next-auth/react";
 
-export const SigninForm = () => {
+export const SignupForm = () => {
     const [isLoading, setIsLoading] = useState(false);
     const router = useRouter();
 
@@ -33,6 +31,8 @@ export const SigninForm = () => {
         resolver: zodResolver(userSchemaWithPassword),
         defaultValues: {
             email: "",
+            name: "",
+            avatarUrl: "",
             password: "",
         },
         mode: "onTouched",
@@ -41,31 +41,27 @@ export const SigninForm = () => {
     async function onSubmit(values: UserFormValuesWithPassword) {
         setIsLoading(true);
         try {
-            const user = await apiService.login({
+            // Chama a API de registro
+            const user = await apiService.register({
+                name: values.name,
                 email: values.email,
-                password: values.password
+                password: values.password,
+                avatarUrl: values.avatarUrl || undefined // Envia como undefined se estiver vazio
             });
 
-            // Opção 2: Usando NextAuth
-            // const result = await signIn("credentials", {
-            //   redirect: false,
-            //   email: values.email,
-            //   password: values.password,
-            // });
+            toast.success("Conta criada com sucesso!", {
+                description: "Verifique seu e-mail para confirmar sua conta."
+            });
 
-            // if (result?.error) throw new Error(result.error);
+            // Redireciona para a página de verificação
+            router.push(`/auth/verify-email?email=${encodeURIComponent(values.email)}`);
 
-            // Atualiza o estado global (se necessário)
-            useAuthStore.getState().login(user);
-
-            toast.success("Login realizado com sucesso!");
-            router.push("/mainpage");
         } catch (error) {
-            console.error("Login error:", error);
-            toast.error("Falha no login", {
+            console.error("Registration error:", error);
+            toast.error("Falha no cadastro", {
                 description: error instanceof Error
                     ? error.message
-                    : "Verifique seu e-mail e senha e tente novamente."
+                    : "Verifique os campos e tente novamente."
             });
         } finally {
             setIsLoading(false);
@@ -79,6 +75,20 @@ export const SigninForm = () => {
                 className="space-y-4 max-w-md"
             >
                 <CardContent>
+                    <FormField
+                        control={form.control}
+                        name="name"
+                        render={({ field }) => (
+                            <FormItem className="mt-4">
+                                <FormLabel>Nome</FormLabel>
+                                <FormControl>
+                                    <Input placeholder="Seu nome completo" {...field} />
+                                </FormControl>
+                                <FormMessage />
+                            </FormItem>
+                        )}
+                    />
+
                     <FormField
                         control={form.control}
                         name="email"
@@ -100,16 +110,15 @@ export const SigninForm = () => {
 
                     <FormField
                         control={form.control}
-                        name="password"
+                        name="avatarUrl"
                         render={({ field }) => (
                             <FormItem className="mt-4">
-                                <FormLabel>Senha</FormLabel>
+                                <FormLabel>URL do avatar (opcional)</FormLabel>
                                 <FormControl>
                                     <Input
-                                        type="password"
-                                        autoComplete="current-password"
-                                        placeholder="Digite sua senha"
+                                        placeholder="https://..."
                                         {...field}
+                                        value={field.value || ""}
                                     />
                                 </FormControl>
                                 <FormMessage />
@@ -118,31 +127,39 @@ export const SigninForm = () => {
                     />
 
                     <FormField
-                        name="google-signin"
-                        render={() => (
+                        control={form.control}
+                        name="password"
+                        render={({ field }) => (
                             <FormItem className="mt-4">
-                                <FormLabel className="flex justify-center"></FormLabel>
+                                <FormLabel>Senha</FormLabel>
                                 <FormControl>
-                                    <div className="space-y-4">
-                                        <div className="w-full border-t border-white"></div>
-                                    </div>
+                                    <Input
+                                        type="password"
+                                        autoComplete="new-password"
+                                        placeholder="Escolha uma senha segura"
+                                        {...field}
+                                    />
                                 </FormControl>
                                 <FormMessage />
                             </FormItem>
                         )}
                     />
+
                     <div className="flex justify-center">
                         <div className="mt-4 flex items-center gap-0 text-sm">
-                            Novo por aqui?
-                            <Link href={"/auth/signup"}>
-                                <Button type="button" variant={"link"} className="pl-1">Registre-se</Button>
+                            Já possui conta?
+                            <Link href={"/auth/signin"}>
+                                <Button type="button" variant={"link"} className="pl-1">
+                                    Faça Login
+                                </Button>
                             </Link>
                         </div>
                     </div>
                 </CardContent>
+
                 <CardFooter className="justify-end">
                     <Button type="submit" disabled={isLoading}>
-                        {isLoading ? "Entrando…" : "Entrar"}
+                        {isLoading ? "Criando conta…" : "Criar conta"}
                     </Button>
                 </CardFooter>
             </form>
