@@ -1,5 +1,4 @@
 import {FlickeringParticles} from "@/components/animations/flickering-particles";
-import {SigninForm} from "@/components/auth/signin-form";
 import {ModeToggle} from "@/components/mode-toggle";
 import {
   Card,
@@ -7,6 +6,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import {SigninForm} from "@/components/auth/signin-form";
 
 export default function Page() {
   return (

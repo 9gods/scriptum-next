@@ -49,7 +49,7 @@ export const SignupForm = () => {
         });
 
         toast.success("Conta criada com sucesso!");
-        router.push("/dashboard");
+        router.push("/mainpage");
 
       } catch (error) {
         console.error("Registration error:", error);

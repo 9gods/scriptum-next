@@ -1,7 +1,7 @@
 import {create} from 'zustand';
 import {persist} from 'zustand/middleware';
 import {User} from '@/domain/entities/user';
-import {apiService, AuthRequestBody, UserRequestBody} from "@/domain/service/api";
+import {apiService, AuthRequestBody, AuthResponse, UserRequestBody} from "@/domain/service/api";
 
 interface AuthStore {
   user: User | null;
@@ -29,6 +29,7 @@ export const useAuthStore = create<AuthStore>()(
           set({isLoading: true});
 
           const response = await apiService.login(credentials);
+          console.log('Response do login:', response);
 
           const user: User = {
             id: response.userId,
