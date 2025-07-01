@@ -1,12 +1,12 @@
-import { FlickeringParticles } from "@/components/animations/flickering-particles";
-import { SigninForm } from "@/components/auth/signin-form";
-import { ModeToggle } from "@/components/mode-toggle";
+import {FlickeringParticles} from "@/components/animations/flickering-particles";
+import {ModeToggle} from "@/components/mode-toggle";
 import {
   Card,
   CardDescription,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import {SigninForm} from "@/components/auth/signin-form";
 
 export default function Page() {
   return (
@@ -18,10 +18,10 @@ export default function Page() {
             Insira seu email e senha, ou acesse sua conta Google.
           </CardDescription>
         </CardHeader>
-         <SigninForm />
+        <SigninForm/>
       </Card>
-      <ModeToggle className="absolute top-4 right-4" />
-      <FlickeringParticles className="absolute inset-0 invert dark:invert-0 dark:opacity-10 opacity-20" />
+      <ModeToggle className="absolute top-4 right-4"/>
+      <FlickeringParticles className="absolute inset-0 invert dark:invert-0 dark:opacity-10 opacity-20"/>
     </div>
   );
 }

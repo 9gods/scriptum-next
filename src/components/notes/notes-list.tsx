@@ -27,7 +27,7 @@ export const NotesList = () => {
           key={note.id}
           note={note}
           onTogglePin={togglePin}
-          onDeleteNote={handleDeleteNote}
+          onDelete={handleDeleteNote}
         />
       ))}
     </div>

@@ -13,25 +13,15 @@ import {
 } from "@/components/ui/sidebar";
 
 const items = [
-	{
-		title: "Home",
-		url: "#",
-		icon: Home,
-	},
-	{
-		title: "Inbox",
-		url: "#",
+		{
+		title: "Criar Nota",
+		url: "/notes/new",
 		icon: Inbox,
 	},
 	{
-		title: "Calendar",
-		url: "#",
-		icon: Calendar,
-	},
-	{
-		title: "Search",
-		url: "#",
-		icon: Search,
+		title: "Home",
+		url: "/mainpage",
+		icon: Home,
 	},
 	{
 		title: "Settings",
@@ -45,7 +35,7 @@ export function AppSidebar() {
 		<Sidebar>
 			<SidebarContent>
 				<SidebarGroup>
-					<SidebarGroupLabel>Application</SidebarGroupLabel>
+					<SidebarGroupLabel>Scriptum</SidebarGroupLabel>
 					<SidebarGroupContent>
 						<SidebarMenu>
 							{items.map((item) => (
@@ -61,7 +51,7 @@ export function AppSidebar() {
 						</SidebarMenu>
 					</SidebarGroupContent>
 				</SidebarGroup>
-				<SidebarFooter>asd</SidebarFooter>
+				<SidebarFooter></SidebarFooter>
 			</SidebarContent>
 		</Sidebar>
 	);

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { type NoteFormValues, noteSchema } from "@/schemas/notes-schema";
@@ -19,38 +19,77 @@ import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { MarkdownPreview } from "@/components/ui/markdown-preview";
 import { useRouter } from "next/navigation";
+import { TagsInput } from "@/components/notes/tags-input";
+import { ColorPicker } from "@/components/notes/color-picker";
 
 interface NoteFormProps {
   initialData?: NoteFormValues & { id?: string };
   onSuccess?: () => void;
 }
 
+type FeedbackType = {
+  message: string;
+  type: 'success' | 'error';
+};
+
+const DEFAULT_NOTE_VALUES: NoteFormValues = {
+  title: "",
+  content: "",
+  isPinned: false,
+  color: "#FFFFFF",
+  tags: []
+};
+
 export function NoteForm({ initialData, onSuccess }: NoteFormProps) {
   const [wordCount, setWordCount] = useState(0);
   const [charCount, setCharCount] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [feedback, setFeedback] = useState<{message: string; type: 'success' | 'error'} | null>(null);
+  const [feedback, setFeedback] = useState<FeedbackType | null>(null);
   const router = useRouter();
 
   const form = useForm<NoteFormValues>({
     resolver: zodResolver(noteSchema),
-    defaultValues: initialData || {
-      title: "",
-      content: "",
-      isPinned: false,
-      color: "#FFFF",
-      tags: []
-    },
+    defaultValues: initialData || DEFAULT_NOTE_VALUES,
   });
 
   const content = form.watch("content");
+  const tags = form.watch("tags");
+  const color = form.watch("color");
 
+  // Carrega os dados da nota se for edição
+  useEffect(() => {
+    if (!initialData?.id) return;
+    
+    try {
+      const notes = JSON.parse(localStorage.getItem('notes') || '[]');
+      const note = notes.find((n: any) => n.id === initialData.id);
+      
+      if (note) {
+        form.reset({
+          title: note.title,
+          content: note.content,
+          isPinned: note.isPinned || false,
+          color: note.color || "#FFFFFF",
+          tags: note.tags || []
+        });
+      }
+    } catch (error) {
+      console.error("Failed to fetch note data:", error);
+      setFeedback({
+        message: "Falha ao carregar os dados da nota",
+        type: 'error'
+      });
+    }
+  }, [initialData?.id, form]);
+
+  // Contagem de palavras e caracteres
   useEffect(() => {
     const text = content || "";
     setWordCount(text.trim() ? text.trim().split(/\s+/).length : 0);
     setCharCount(text.length);
   }, [content]);
 
+  // Feedback temporário
   useEffect(() => {
     if (feedback) {
       const timer = setTimeout(() => setFeedback(null), 3000);
@@ -58,50 +97,47 @@ export function NoteForm({ initialData, onSuccess }: NoteFormProps) {
     }
   }, [feedback]);
 
-  const onSubmit = async (values: NoteFormValues) => {
+  const onSubmit = useCallback(async (values: NoteFormValues) => {
     setIsSubmitting(true);
     try {
-      let response;
+      const notes = JSON.parse(localStorage.getItem('notes') || '[]');
       const noteData = {
-        ...values,
+        id: initialData?.id || Date.now().toString(),
+        title: values.title,
+        content: values.content,
+        isPinned: values.isPinned,
+        color: values.color,
         tags: values.tags || [],
+        createdAt: initialData?.id 
+          ? notes.find((n: any) => n.id === initialData.id)?.createdAt || new Date().toISOString()
+          : new Date().toISOString(),
+        updatedAt: new Date().toISOString()
       };
 
+      let updatedNotes;
+      
       if (initialData?.id) {
-        response = await fetch(`/api/notes/${initialData.id}`, {
-          method: "PUT",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(noteData),
+        // Atualizar nota existente
+        updatedNotes = notes.map((n: any) => 
+          n.id === initialData.id ? noteData : n
+        );
+        setFeedback({
+          message: "Nota atualizada com sucesso!",
+          type: 'success'
         });
       } else {
-        response = await fetch("/api/notes", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(noteData),
+        // Criar nova nota
+        updatedNotes = [...notes, noteData];
+        setFeedback({
+          message: "Nota criada com sucesso!",
+          type: 'success'
         });
       }
 
-      if (!response.ok) {
-        throw new Error("Falha ao salvar a nota");
-      }
-
-      const result = await response.json();
-      
-      setFeedback({
-        message: initialData?.id ? "Nota atualizada com sucesso!" : "Nota criada com sucesso!",
-        type: 'success'
-      });
-
-      if (onSuccess) {
-        onSuccess();
-      } else if (!initialData?.id) {
-        router.push(`/notes/${result.id}`);
-      }
+      localStorage.setItem('notes', JSON.stringify(updatedNotes));
+      onSuccess?.() || (!initialData?.id && router.push(`/notes/${noteData.id}`));
     } catch (error) {
+      console.error("Failed to save note:", error);
       setFeedback({
         message: error instanceof Error ? error.message : "Ocorreu um erro ao salvar a nota",
         type: 'error'
@@ -109,32 +145,49 @@ export function NoteForm({ initialData, onSuccess }: NoteFormProps) {
     } finally {
       setIsSubmitting(false);
     }
-  };
+  }, [initialData?.id, onSuccess, router]);
 
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+  // Atalhos de teclado para Markdown
+  const handleKeyDown = useCallback((e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (!(e.ctrlKey || e.metaKey)) return;
+
     const textarea = e.currentTarget;
-    const start = textarea.selectionStart;
-    const end = textarea.selectionEnd;
-    const value = textarea.value;
+    const { selectionStart: start, selectionEnd: end, value } = textarea;
+    const selectedText = value.substring(start, end);
 
-    if (e.ctrlKey && e.key === "b") {
-      e.preventDefault();
-      const selectedText = value.substring(start, end);
-      const newText = value.substring(0, start) + `**${selectedText}**` + value.substring(end);
-      form.setValue("content", newText);
-      textarea.selectionStart = start + 2;
-      textarea.selectionEnd = end + 2;
+    let newText = "";
+    let cursorOffset = 0;
+
+    switch (e.key) {
+      case "b":
+        e.preventDefault();
+        newText = `**${selectedText}**`;
+        cursorOffset = 2;
+        break;
+      case "i":
+        e.preventDefault();
+        newText = `_${selectedText}_`;
+        cursorOffset = 1;
+        break;
+      case "1":
+        e.preventDefault();
+        newText = `\n# ${selectedText}`;
+        break;
+      default:
+        return;
     }
 
-    if (e.ctrlKey && e.key === "i") {
-      e.preventDefault();
-      const selectedText = value.substring(start, end);
-      const newText = value.substring(0, start) + `_${selectedText}_` + value.substring(end);
-      form.setValue("content", newText);
-      textarea.selectionStart = start + 1;
-      textarea.selectionEnd = end + 1;
+    form.setValue("content", 
+      value.substring(0, start) + newText + value.substring(end)
+    );
+    
+    if (cursorOffset) {
+      setTimeout(() => {
+        textarea.selectionStart = start + cursorOffset;
+        textarea.selectionEnd = end + cursorOffset;
+      }, 0);
     }
-  };
+  }, [form]);
 
   return (
     <div className="fixed inset-0 bg-background overflow-auto">
@@ -196,6 +249,46 @@ export function NoteForm({ initialData, onSuccess }: NoteFormProps) {
                 </div>
               </div>
 
+              {/* Tags e Cor */}
+              <div className="flex gap-4 mb-4">
+                <div className="flex-1">
+                  <FormField
+                    control={form.control}
+                    name="tags"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Tags</FormLabel>
+                        <FormControl>
+                          <TagsInput
+                            selected={field.value || []}
+                            onChange={(tags) => field.onChange(tags)}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+                <div className="w-32">
+                  <FormField
+                    control={form.control}
+                    name="color"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Cor</FormLabel>
+                        <FormControl>
+                          <ColorPicker
+                            value={field.value}
+                            onChange={field.onChange}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+              </div>
+
               {/* Editor Area */}
               <Tabs defaultValue="write" className="flex-1 flex flex-col">
                 <div className="flex justify-between items-center mb-2">
@@ -229,7 +322,10 @@ export function NoteForm({ initialData, onSuccess }: NoteFormProps) {
                 </TabsContent>
 
                 <TabsContent value="preview" className="flex-1 min-h-[400px]">
-                  <div className="h-full p-4 overflow-auto prose dark:prose-invert max-w-none border rounded-lg">
+                  <div 
+                    className="h-full p-4 overflow-auto prose dark:prose-invert max-w-none border rounded-lg"
+                    style={{ backgroundColor: color }}
+                  >
                     <MarkdownPreview
                       content={content || "*Nada para pré-visualizar*"}
                     />
@@ -242,10 +338,7 @@ export function NoteForm({ initialData, onSuccess }: NoteFormProps) {
                 <div className="flex gap-4">
                   <button
                     type="button"
-                    onClick={() => {
-                      const content = form.getValues("content") || "";
-                      form.setValue("content", content + "\n# ");
-                    }}
+                    onClick={() => form.setValue("content", `${content}\n# `)}
                     className="hover:text-foreground"
                     title="Cabeçalho 1 (Ctrl+1)"
                   >
