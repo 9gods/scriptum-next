@@ -9,7 +9,6 @@ interface AuthStore {
   isAuthenticated: boolean;
   isLoading: boolean;
 
-  // Actions
   login: (credentials: AuthRequestBody) => Promise<void>;
   register: (userData: UserRequestBody) => Promise<void>;
   logout: () => void;
