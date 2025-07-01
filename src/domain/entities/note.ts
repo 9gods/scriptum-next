@@ -7,6 +7,7 @@ export interface Note {
     content: string; // markdown
     tags: Array<Tag>;
     isPinned: boolean;
+    userId: string;
     createdAt: Date;
     modifiedAt: Date;
 }

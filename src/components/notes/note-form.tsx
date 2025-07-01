@@ -21,6 +21,10 @@ import { MarkdownPreview } from "@/components/ui/markdown-preview";
 import { useRouter } from "next/navigation";
 import { TagsInput } from "@/components/notes/tags-input";
 import { ColorPicker } from "@/components/notes/color-picker";
+import { useNotesApi } from "@/hooks/use-notes-api";
+import { useAuthStore } from "@/lib/store/use-auth-store";
+import { Note } from "@/domain/entities/note";
+import { getContrastTextColor } from "@/lib/utils";
 
 interface NoteFormProps {
   initialData?: NoteFormValues & { id?: string };
@@ -46,6 +50,8 @@ export function NoteForm({ initialData, onSuccess }: NoteFormProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [feedback, setFeedback] = useState<FeedbackType | null>(null);
   const router = useRouter();
+  const { createNote, updateNote, getNoteById } = useNotesApi();
+  const { user } = useAuthStore();
 
   const form = useForm<NoteFormValues>({
     resolver: zodResolver(noteSchema),
@@ -60,27 +66,30 @@ export function NoteForm({ initialData, onSuccess }: NoteFormProps) {
   useEffect(() => {
     if (!initialData?.id) return;
     
-    try {
-      const notes = JSON.parse(localStorage.getItem('notes') || '[]');
-      const note = notes.find((n: any) => n.id === initialData.id);
-      
-      if (note) {
-        form.reset({
-          title: note.title,
-          content: note.content,
-          isPinned: note.isPinned || false,
-          color: note.color || "#FFFFFF",
-          tags: note.tags || []
+    const loadNote = async () => {
+      try {
+        const note = await getNoteById(initialData.id);
+        
+        if (note) {
+          form.reset({
+            title: note.title,
+            content: note.content,
+            isPinned: note.isPinned || false,
+            color: note.color || "#FFFFFF",
+            tags: note.tags?.map(tag => tag.name) || []
+          });
+        }
+      } catch (error) {
+        console.error("Failed to fetch note data:", error);
+        setFeedback({
+          message: "Falha ao carregar os dados da nota",
+          type: 'error'
         });
       }
-    } catch (error) {
-      console.error("Failed to fetch note data:", error);
-      setFeedback({
-        message: "Falha ao carregar os dados da nota",
-        type: 'error'
-      });
-    }
-  }, [initialData?.id, form]);
+    };
+
+    loadNote();
+  }, [initialData?.id, form, getNoteById]);
 
   // Contagem de palavras e caracteres
   useEffect(() => {
@@ -98,44 +107,49 @@ export function NoteForm({ initialData, onSuccess }: NoteFormProps) {
   }, [feedback]);
 
   const onSubmit = useCallback(async (values: NoteFormValues) => {
+    if (!user) {
+      setFeedback({
+        message: "Usuário não autenticado",
+        type: 'error'
+      });
+      return;
+    }
+
     setIsSubmitting(true);
     try {
-      const notes = JSON.parse(localStorage.getItem('notes') || '[]');
+      // Converter string[] para Tag[] para a API
+      const tagsAsTags = values.tags.map(tagName => ({
+        id: '', // Será gerado pelo backend
+        name: tagName,
+        color: '#6b7280', // Cor padrão
+        createdAt: new Date(),
+        modifiedAt: new Date(),
+      }));
+
       const noteData = {
-        id: initialData?.id || Date.now().toString(),
         title: values.title,
         content: values.content,
         isPinned: values.isPinned,
         color: values.color,
-        tags: values.tags || [],
-        createdAt: initialData?.id 
-          ? notes.find((n: any) => n.id === initialData.id)?.createdAt || new Date().toISOString()
-          : new Date().toISOString(),
-        updatedAt: new Date().toISOString()
+        tags: tagsAsTags,
       };
 
-      let updatedNotes;
-      
       if (initialData?.id) {
         // Atualizar nota existente
-        updatedNotes = notes.map((n: any) => 
-          n.id === initialData.id ? noteData : n
-        );
+        await updateNote(initialData.id, noteData);
         setFeedback({
           message: "Nota atualizada com sucesso!",
           type: 'success'
         });
       } else {
         // Criar nova nota
-        updatedNotes = [...notes, noteData];
+        const newNote = await createNote(noteData);
         setFeedback({
           message: "Nota criada com sucesso!",
           type: 'success'
         });
+        onSuccess?.() || router.push(`/notes/${newNote.id}`);
       }
-
-      localStorage.setItem('notes', JSON.stringify(updatedNotes));
-      onSuccess?.() || (!initialData?.id && router.push(`/notes/${noteData.id}`));
     } catch (error) {
       console.error("Failed to save note:", error);
       setFeedback({
@@ -145,9 +159,8 @@ export function NoteForm({ initialData, onSuccess }: NoteFormProps) {
     } finally {
       setIsSubmitting(false);
     }
-  }, [initialData?.id, onSuccess, router]);
+  }, [initialData?.id, onSuccess, router, createNote, updateNote, user]);
 
-  // Atalhos de teclado para Markdown
   const handleKeyDown = useCallback((e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (!(e.ctrlKey || e.metaKey)) return;
 
@@ -190,9 +203,9 @@ export function NoteForm({ initialData, onSuccess }: NoteFormProps) {
   }, [form]);
 
   return (
-    <div className="fixed inset-0 bg-background overflow-auto">
-      <div className="min-h-screen w-full flex flex-col items-center p-4">
-        <div className="w-full max-w-6xl flex-1 flex flex-col">
+    <div className="min-h-screen bg-background">
+      <div className="w-full flex flex-col p-4">
+        <div className="w-full max-w-6xl mx-auto flex-1 flex flex-col">
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="flex-1 flex flex-col">
               {/* Feedback Message */}
@@ -290,7 +303,7 @@ export function NoteForm({ initialData, onSuccess }: NoteFormProps) {
               </div>
 
               {/* Editor Area */}
-              <Tabs defaultValue="write" className="flex-1 flex flex-col">
+              <Tabs defaultValue="write" className="flex-1 flex flex-col min-h-[500px]">
                 <div className="flex justify-between items-center mb-2">
                   <TabsList className="grid w-[200px] grid-cols-2">
                     <TabsTrigger value="write">Editar</TabsTrigger>
@@ -323,7 +336,11 @@ export function NoteForm({ initialData, onSuccess }: NoteFormProps) {
 
                 <TabsContent value="preview" className="flex-1 min-h-[400px]">
                   <div 
-                    className="h-full p-4 overflow-auto prose dark:prose-invert max-w-none border rounded-lg"
+                    className={`h-full p-4 overflow-auto prose max-w-none border rounded-lg ${
+                      getContrastTextColor(color || '#ffffff') === 'light' 
+                        ? 'prose-invert' 
+                        : ''
+                    }`}
                     style={{ backgroundColor: color }}
                   >
                     <MarkdownPreview

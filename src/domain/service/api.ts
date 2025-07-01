@@ -9,6 +9,19 @@ const api = axios.create({
 
 api.interceptors.request.use(
   (config) => {
+    try {
+      const { useAuthStore } = require('@/lib/store/use-auth-store');
+      const token = useAuthStore.getState().token;
+      
+      if (token) {
+        config.headers.Authorization = `Bearer ${token}`;
+        return config;
+      }
+    } catch (error) {
+      console.log('Zustand store não disponível, tentando localStorage');
+    }
+
+    // Fallback para localStorage (compatibilidade)
     const authStorage = localStorage.getItem('auth-storage');
     if (authStorage) {
       try {
@@ -25,7 +38,6 @@ api.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
-
 api.interceptors.response.use(
   response => response,
   error => {
@@ -34,8 +46,22 @@ api.interceptors.response.use(
     }
 
     if (error.response?.status === 401) {
+      console.log('Erro 401 - Limpando autenticação');
+      
+      // Limpar Zustand store
+      try {
+        const { useAuthStore } = require('@/lib/store/use-auth-store');
+        useAuthStore.getState().clearAuth();
+      } catch (error) {
+        console.log('Erro ao limpar Zustand store:', error);
+      }
+      
+      // Limpar localStorage também
       localStorage.removeItem('auth-storage');
-      window.location.href = '/auth/signin';
+      
+      if (typeof window !== 'undefined') {
+        window.location.href = '/auth/signin';
+      }
     }
 
     return Promise.reject(error);

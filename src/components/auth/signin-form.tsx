@@ -21,11 +21,12 @@ import {useState} from "react";
 import {CardContent, CardFooter} from "../ui/card";
 import Link from "next/link";
 import {useRouter} from "next/navigation";
-import axios from "axios";
+import {useAuthStore} from "@/lib/store/use-auth-store";
 
 export const SigninForm = () => {
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
+  const { login } = useAuthStore();
 
   const form = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
@@ -40,42 +41,27 @@ export const SigninForm = () => {
     console.log("onSubmit chamado!");
     console.log("Valores do formulário:", values);
     setIsLoading(true);
-    console.log("testeeeee");
+    
     try {
-      // Chamada direta ao backend
-      const response = await axios.post("http://localhost:8080/api/auth/login", {
+      // Usar o método login do store de autenticação
+      await login({
         email: values.email,
         password: values.password,
       });
-      const data = response.data;
-      if (data && data.token) {
-        // Salva o token e dados do usuário no localStorage
-        localStorage.setItem(
-          "auth-storage",
-          JSON.stringify({
-            state: {
-              token: data.token,
-              user: {
-                id: data.userId,
-                name: data.name,
-                email: data.email,
-              },
-            },
-          })
-        );
-        toast.success("Login realizado com sucesso!");
-        router.push("/mainpage");
-        router.refresh();
-      } else {
-        toast.error("Falha no login. Verifique suas credenciais.");
-      }
+      
+      toast.success("Login realizado com sucesso!");
+      router.push("/mainpage");
+      router.refresh();
     } catch (error: any) {
+      console.error("Erro no login:", error);
+      
       if (error.response && error.response.status === 401) {
         toast.error("Credenciais inválidas.");
+      } else if (error.message) {
+        toast.error(error.message);
       } else {
         toast.error("Ocorreu um erro inesperado. Tente novamente.");
       }
-      console.error("Erro no login:", error);
     } finally {
       setIsLoading(false);
     }

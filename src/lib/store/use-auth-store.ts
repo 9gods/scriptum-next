@@ -26,10 +26,11 @@ export const useAuthStore = create<AuthStore>()(
 
       login: async (credentials: AuthRequestBody) => {
         try {
+          console.log("AuthStore - Iniciando login:", credentials.email);
           set({isLoading: true});
 
           const response = await apiService.login(credentials);
-          console.log('Response do login:', response);
+          console.log('AuthStore - Response do login:', response);
 
           const user: User = {
             id: response.userId,
@@ -41,6 +42,7 @@ export const useAuthStore = create<AuthStore>()(
             newUser: response.newUser,
           };
 
+          console.log("AuthStore - Definindo estado autenticado:", { user, token: response.token });
           set({
             user,
             token: response.token,
@@ -48,7 +50,10 @@ export const useAuthStore = create<AuthStore>()(
             isLoading: false,
           });
 
+          console.log("AuthStore - Estado após login:", get());
+
         } catch (error) {
+          console.error("AuthStore - Erro no login:", error);
           set({isLoading: false});
           throw error;
         }
@@ -85,6 +90,7 @@ export const useAuthStore = create<AuthStore>()(
       },
 
       logout: () => {
+        console.log("AuthStore - Fazendo logout");
         set({
           user: null,
           token: null,
@@ -94,6 +100,7 @@ export const useAuthStore = create<AuthStore>()(
       },
 
       setUser: (user: User, token: string) => {
+        console.log("AuthStore - Definindo usuário:", user);
         set({
           user,
           token,
@@ -102,6 +109,7 @@ export const useAuthStore = create<AuthStore>()(
       },
 
       clearAuth: () => {
+        console.log("AuthStore - Limpando autenticação");
         set({
           user: null,
           token: null,
@@ -113,11 +121,15 @@ export const useAuthStore = create<AuthStore>()(
     {
       name: 'auth-storage',
       version: 1,
-      partialize: (state) => ({
-        user: state.user,
-        token: state.token,
-        isAuthenticated: state.isAuthenticated,
-      }),
+      partialize: (state) => {
+        console.log("AuthStore - Salvando estado:", state);
+        return {
+          user: state.user,
+          token: state.token,
+          isAuthenticated: state.isAuthenticated,
+        };
+      },
+      skipHydration: true, // Pular hidratação automática
     }
   )
 );

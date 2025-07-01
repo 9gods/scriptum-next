@@ -2,7 +2,9 @@
 import { NoteCard } from '@/components/notes/note-card'
 import { ModeToggle } from "@/components/mode-toggle"
 import { NotesList } from '@/components/notes/notes-list'
-import { useState, useCallback } from 'react'
+import { SearchNotes } from '@/components/notes/search-notes'
+import { useNotesApi } from '@/hooks/use-notes-api'
+import { useAuthGuard } from '@/hooks/use-auth-guard'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -15,26 +17,21 @@ import {
 } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
-import { Note } from '@/domain/types/types'
-
-
+import { Note } from '@/domain/entities/note'
+import { useState, useCallback, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
+import { Loader2 } from 'lucide-react'
 
 const TEMPLATES_NOTES_TITLE = "Talvez você se interesse..."
 const NOTES_TITLE = "Minhas Notas"
 
 export default function HomePage() {
-  const [notes, setNotes] = useState<Note[]>([
-    {
-      id: '1',
-      title: 'Sistemas de Notas Avançados',
-      content: 'Técnicas eficientes para organização pessoal e profissional...',
-      tags: ['produtividade', 'pesquisa'],
-      links: ['metodos-eficientes'],
-      lastEdited: new Date().toISOString()
-    },
-    // ... outros exemplos de notas
-  ])
+  const { isAuthenticated, isChecking } = useAuthGuard();
+  const { notes, isLoading, error, deleteNote, updateNote, loadNotes } = useNotesApi();
+  const router = useRouter();
 
+  const [displayedNotes, setDisplayedNotes] = useState<Note[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
   const [noteToDelete, setNoteToDelete] = useState<Note | null>(null)
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false)
   
@@ -43,34 +40,81 @@ export default function HomePage() {
   const [editedTitle, setEditedTitle] = useState('')
   const [editedContent, setEditedContent] = useState('')
 
-  const handleDeleteNote = useCallback(() => {
-    if (noteToDelete) {
-      setNotes(prevNotes => 
-        prevNotes.filter(note => note.id !== noteToDelete.id)
-      )
-      setIsDeleteModalOpen(false)
-      setNoteToDelete(null)
+  useEffect(() => {
+    if (notes.length > 0) {
+      setDisplayedNotes(notes);
     }
-  }, [noteToDelete])
+  }, [notes]);
 
-  const handleSaveEdit = useCallback(() => {
-    if (noteToEdit) {
-      setNotes(prevNotes =>
-        prevNotes.map(note =>
-          note.id === noteToEdit.id
-            ? {
-                ...note,
-                title: editedTitle,
-                content: editedContent,
-                lastEdited: new Date().toISOString()
-              }
-            : note
-        )
-      )
-      setIsEditModalOpen(false)
-      setNoteToEdit(null)
+  const handleSearchResults = useCallback((searchResults: Note[]) => {
+    setDisplayedNotes(searchResults);
+    setIsSearching(true);
+  }, []);
+
+  const handleClearSearch = useCallback(() => {
+    setDisplayedNotes(notes);
+    setIsSearching(false);
+  }, [notes]);
+
+  const handleDeleteNote = useCallback(async () => {
+    if (noteToDelete) {
+      try {
+        await deleteNote(noteToDelete.id);
+        setIsDeleteModalOpen(false)
+        setNoteToDelete(null)
+        // Recarregar notas após deletar
+        await loadNotes();
+      } catch (error) {
+        console.error('Erro ao deletar nota:', error);
+      }
     }
-  }, [noteToEdit, editedTitle, editedContent])
+  }, [noteToDelete, deleteNote, loadNotes])
+
+  const handleSaveEdit = useCallback(async () => {
+    if (noteToEdit) {
+      try {
+        await updateNote(noteToEdit.id, {
+          title: editedTitle,
+          content: editedContent,
+        });
+        setIsEditModalOpen(false)
+        setNoteToEdit(null)
+        // Recarregar notas após editar
+        await loadNotes();
+      } catch (error) {
+        console.error('Erro ao atualizar nota:', error);
+      }
+    }
+  }, [noteToEdit, editedTitle, editedContent, updateNote, loadNotes])
+
+  // Aguardar verificação de autenticação
+  if (isChecking) {
+    return (
+      <div className="flex items-center justify-center h-full">
+        <Loader2 className="h-8 w-8 animate-spin" />
+      </div>
+    );
+  }
+
+  if (!isAuthenticated) {
+    return null;
+  }
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-full">
+        <Loader2 className="h-8 w-8 animate-spin" />
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="text-center text-red-500 p-4">
+        Erro ao carregar notas: {error}
+      </div>
+    );
+  }
 
   return (
     <div className="flex h-full">
@@ -81,23 +125,33 @@ export default function HomePage() {
           <section className="py-8 px-4 max-w-6xl mx-auto">
             <div className="text-center mb-8">
               <h2 className="text-2xl font-bold text-gray-800 dark:text-gray-100">
-                {TEMPLATES_NOTES_TITLE}
+                {isSearching ? "Resultados da Busca" : TEMPLATES_NOTES_TITLE}
               </h2>
               <p className="text-gray-500 dark:text-gray-400 mt-2">
-                {notes.length} {notes.length === 1 ? 'sugestão disponível' : 'sugestões disponíveis'}
+                {displayedNotes.length} {displayedNotes.length === 1 ? 'nota encontrada' : 'notas encontradas'}
               </p>
             </div>
+
+            {/* Componente de busca */}
+            <SearchNotes 
+              onSearchResults={handleSearchResults}
+              onClearSearch={handleClearSearch}
+            />
             
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 justify-items-center">
-              {notes.map((note) => (
+              {displayedNotes.slice(0, 6).map((note) => (
                 <NoteCard
                   key={note.id}
-                  {...note}
-                  className="w-full"
+                  id={note.id || ''}
+                  title={note.title || 'Sem título'}
+                  content={note.content || ''}
+                  tags={note.tags?.map(tag => tag.name) || []}
+                  links={[]}
+                  lastEdited={note.modifiedAt ? new Date(note.modifiedAt).toISOString() : undefined}
                   onEdit={() => {
                     setNoteToEdit(note)
-                    setEditedTitle(note.title)
-                    setEditedContent(note.content)
+                    setEditedTitle(note.title || '')
+                    setEditedContent(note.content || '')
                     setIsEditModalOpen(true)
                   }}
                   onDelete={() => {
@@ -113,7 +167,7 @@ export default function HomePage() {
         </main>
       </div>
 
-      {/* Modais (mantidos iguais) */}
+      {/* Modais */}
       <DeleteModal 
         isOpen={isDeleteModalOpen}
         onOpenChange={setIsDeleteModalOpen}

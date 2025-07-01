@@ -1,5 +1,6 @@
 import { FiEdit, FiTrash2 } from 'react-icons/fi'
 import { Button } from '@/components/ui/button'
+import { getContrastTextColor } from '@/lib/utils'
 
 interface NoteCardProps {
   id: string
@@ -8,6 +9,7 @@ interface NoteCardProps {
   tags: string[]
   links: string[]
   lastEdited?: string
+  color?: string
   className?: string
   onEdit: () => void
   onDelete: () => void
@@ -20,22 +22,41 @@ export function NoteCard({
   tags,
   links,
   lastEdited,
+  color = '#ffffff',
   className = '',
   onEdit,
   onDelete
 }: NoteCardProps) {
+  const textColor = getContrastTextColor(color);
+  const isLightText = textColor === 'light';
+
   return (
     <div className={`relative w-full max-w-md group ${className}`}>
-      <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6 h-full shadow-md hover:shadow-lg transition-shadow">
-        <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-100 mb-2">{title}</h3>
-        <p className="text-gray-600 dark:text-gray-300 text-sm mb-4 line-clamp-3">{content}</p>
+      <div 
+        className="rounded-lg border border-gray-200 dark:border-gray-700 p-6 h-full shadow-md hover:shadow-lg transition-shadow"
+        style={{ backgroundColor: color }}
+      >
+        <h3 className={`text-lg font-semibold mb-2 ${
+          isLightText ? 'text-white' : 'text-gray-800 dark:text-gray-100'
+        }`}>
+          {title}
+        </h3>
+        <p className={`text-sm mb-4 line-clamp-3 ${
+          isLightText ? 'text-gray-200' : 'text-gray-600 dark:text-gray-300'
+        }`}>
+          {content}
+        </p>
         
         {tags.length > 0 && (
           <div className="flex flex-wrap gap-2 mb-4">
             {tags.map(tag => (
               <span 
                 key={`${id}-${tag}`}
-                className="px-2 py-1 bg-gray-100 dark:bg-gray-700 text-xs rounded-full text-gray-600 dark:text-gray-300"
+                className={`px-2 py-1 text-xs rounded-full ${
+                  isLightText 
+                    ? 'bg-white/20 text-white' 
+                    : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300'
+                }`}
               >
                 {tag}
               </span>
@@ -44,7 +65,9 @@ export function NoteCard({
         )}
         
         {lastEdited && (
-          <p className="text-xs text-gray-500 dark:text-gray-400 mt-4">
+          <p className={`text-xs mt-4 ${
+            isLightText ? 'text-gray-300' : 'text-gray-500 dark:text-gray-400'
+          }`}>
             Editado em: {new Date(lastEdited).toLocaleDateString()}
           </p>
         )}
