@@ -2,18 +2,18 @@
 
 import { Button } from "../ui/button";
 import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
+    Form,
+    FormControl,
+    FormField,
+    FormItem,
+    FormLabel,
+    FormMessage,
 } from "../ui/form";
 import { Input } from "../ui/input";
 import { useForm } from "react-hook-form";
 import {
-  type UserFormValuesWithPassword,
-  userSchemaWithPassword,
+    type UserFormValuesWithPassword,
+    userSchemaWithPassword,
 } from "@/schemas/user-schema";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
@@ -22,131 +22,130 @@ import { CardContent, CardFooter } from "../ui/card";
 import Link from "next/link";
 import { useAuthStore } from "@/lib/store/use-auth-store";
 import { useRouter } from "next/navigation";
+import { apiService } from "@/domain/service/api";
+import { signIn } from "next-auth/react";
 
-export const SignupForm = () => {
-  const register = useAuthStore((state) => state.register);
-  const isLoading = useAuthStore((state) => state.isLoading);
-  const router = useRouter();
-  const form = useForm<UserFormValuesWithPassword>({
-    resolver: zodResolver(userSchemaWithPassword),
-    defaultValues: {
-      email: "",
-      name: "",
-      avatarUrl: "",
-      password: "",
-    },
-    mode: "onTouched",
-  });
+export const SigninForm = () => {
+    const [isLoading, setIsLoading] = useState(false);
+    const router = useRouter();
 
-  async function onSubmit(values: UserFormValuesWithPassword) {
-    try {
-      await register({
-        name: values.name,
-        email: values.email,
-        password: values.password,
-        avatarUrl: values.avatarUrl
-      });
+    const form = useForm<UserFormValuesWithPassword>({
+        resolver: zodResolver(userSchemaWithPassword),
+        defaultValues: {
+            email: "",
+            password: "",
+        },
+        mode: "onTouched",
+    });
 
-      toast.success("Conta criada com sucesso!");
-      router.push("/dashboard"); // Redirect to dashboard after successful registration
-    } catch (error) {
-      console.error("Registration error:", error);
-      toast.error("Falha no cadastro", {
-        description: "Verifique os campos e tente novamente."
-      });
+    async function onSubmit(values: UserFormValuesWithPassword) {
+        setIsLoading(true);
+        try {
+            const user = await apiService.login({
+                email: values.email,
+                password: values.password
+            });
+
+            // Opção 2: Usando NextAuth
+            // const result = await signIn("credentials", {
+            //   redirect: false,
+            //   email: values.email,
+            //   password: values.password,
+            // });
+
+            // if (result?.error) throw new Error(result.error);
+
+            // Atualiza o estado global (se necessário)
+            useAuthStore.getState().login(user);
+
+            toast.success("Login realizado com sucesso!");
+            router.push("/mainpage");
+        } catch (error) {
+            console.error("Login error:", error);
+            toast.error("Falha no login", {
+                description: error instanceof Error
+                    ? error.message
+                    : "Verifique seu e-mail e senha e tente novamente."
+            });
+        } finally {
+            setIsLoading(false);
+        }
     }
-  }
 
-  return (
-    <Form {...form}>
-      <form
-        onSubmit={form.handleSubmit(onSubmit)}
-        className="space-y-4 max-w-md"
-      >
-        <CardContent>
-          <FormField
-            control={form.control}
-            name="name"
-            render={({ field }) => (
-              <FormItem className="mt-4">
-                <FormLabel>Nome</FormLabel>
-                <FormControl>
-                  <Input placeholder="Seu nome completo" {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
+    return (
+        <Form {...form}>
+            <form
+                onSubmit={form.handleSubmit(onSubmit)}
+                className="space-y-4 max-w-md"
+            >
+                <CardContent>
+                    <FormField
+                        control={form.control}
+                        name="email"
+                        render={({ field }) => (
+                            <FormItem className="mt-4">
+                                <FormLabel>E-mail</FormLabel>
+                                <FormControl>
+                                    <Input
+                                        type="email"
+                                        autoComplete="email"
+                                        placeholder="nome@exemplo.com"
+                                        {...field}
+                                    />
+                                </FormControl>
+                                <FormMessage />
+                            </FormItem>
+                        )}
+                    />
 
-          <FormField
-            control={form.control}
-            name="email"
-            render={({ field }) => (
-              <FormItem className="mt-4">
-                <FormLabel>E-mail</FormLabel>
-                <FormControl>
-                  <Input
-                    type="email"
-                    autoComplete="email"
-                    placeholder="nome@exemplo.com"
-                    {...field}
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
+                    <FormField
+                        control={form.control}
+                        name="password"
+                        render={({ field }) => (
+                            <FormItem className="mt-4">
+                                <FormLabel>Senha</FormLabel>
+                                <FormControl>
+                                    <Input
+                                        type="password"
+                                        autoComplete="current-password"
+                                        placeholder="Digite sua senha"
+                                        {...field}
+                                    />
+                                </FormControl>
+                                <FormMessage />
+                            </FormItem>
+                        )}
+                    />
 
-          <FormField
-            control={form.control}
-            name="avatarUrl"
-            render={({ field }) => (
-              <FormItem className="mt-4">
-                <FormLabel>URL do avatar (opcional)</FormLabel>
-                <FormControl>
-                  <Input placeholder="https://..." {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-
-          <FormField
-            control={form.control}
-            name="password"
-            render={({ field }) => (
-              <FormItem className="mt-4">
-                <FormLabel>Senha</FormLabel>
-                <FormControl>
-                  <Input
-                    type="password"
-                    autoComplete="new-password"
-                    placeholder="Escolha uma senha"
-                    {...field}
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-
-          <div className="flex justify-center">
-            <div className="mt-4 flex items-center gap-0 text-sm">
-              Já possui conta?
-              <Link href={"/auth/signin"}>
-                <Button type="button" variant={"link"} className="pl-1">Faça Login</Button>
-              </Link>
-            </div>
-          </div>
-
-
-        </CardContent>
-        <CardFooter className="justify-end">
-          <Button type="submit" disabled={isLoading}>
-            {isLoading ? "Criando conta…" : "Criar conta"}
-          </Button>
-        </CardFooter>
-      </form>
-    </Form>
-  );
+                    <FormField
+                        name="google-signin"
+                        render={() => (
+                            <FormItem className="mt-4">
+                                <FormLabel className="flex justify-center"></FormLabel>
+                                <FormControl>
+                                    <div className="space-y-4">
+                                        <div className="w-full border-t border-white"></div>
+                                    </div>
+                                </FormControl>
+                                <FormMessage />
+                            </FormItem>
+                        )}
+                    />
+                    <div className="flex justify-center">
+                        <div className="mt-4 flex items-center gap-0 text-sm">
+                            Novo por aqui?
+                            <Link href={"/auth/signup"}>
+                                <Button type="button" variant={"link"} className="pl-1">Registre-se</Button>
+                            </Link>
+                        </div>
+                    </div>
+                </CardContent>
+                <CardFooter className="justify-end">
+                    <Button type="submit" disabled={isLoading}>
+                        {isLoading ? "Entrando…" : "Entrar"}
+                    </Button>
+                </CardFooter>
+            </form>
+        </Form>
+    );
 };
